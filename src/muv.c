@@ -56,6 +56,17 @@ void muv__async_cb(uv_async_t* async, int status) {
         }
         break;
       }
+    case MUV_TCP_CONNECT6:
+      {
+        muv_tcp_connect6_t* req = (muv_tcp_connect6_t*) node->req;
+        r = uv_tcp_connect6(req->req, req->handle, req->address, req->cb);
+        if (r) {
+          if (req->cb) {
+            req->cb(req->req, -1);
+          }
+        }
+        break;
+      }
     case MUV_LISTEN:
       {
         muv_listen_t* req = (muv_listen_t*) node->req;
@@ -67,10 +78,33 @@ void muv__async_cb(uv_async_t* async, int status) {
         }
         break;
       }
+    case MUV_ACCEPT:
+      {
+        muv_accept_t* req = (muv_accept_t*) node->req;
+        r = uv_accept(req->server, req->client);
+        if (r) {
+          if (mid->error_cb) {
+            uv_err_t err = uv_last_error(mid->loop);
+            mid->error_cb(mid, err);
+          }
+        }
+        break;
+      }
     case MUV_WRITE:
       {
         muv_write_t* req = (muv_write_t*) node->req;
         r = uv_write(req->req, req->handle, req->bufs, req->bufcnt, req->cb);
+        if (r) {
+          if (req->cb) {
+            req->cb(req->req, -1);
+          }
+        }
+        break;
+      }
+    case MUV_SHUTDOWN:
+      {
+        muv_shutdown_t* req = (muv_shutdown_t*) node->req;
+        r = uv_shutdown(req->req, req->handle, req->cb);
         if (r) {
           if (req->cb) {
             req->cb(req->req, -1);
@@ -162,12 +196,13 @@ int muv_destroy(muv_t* mid) {
     return r;
   }
 
+  uv_mutex_destroy(&(mid->mutex));
+
   return 0;
 }
 
 int muv_tcp_init(muv_t* mid, uv_loop_t* loop, uv_tcp_t* handle) {
   int r;
-
 
   uv_mutex_lock(&(mid->mutex));
   r = uv_tcp_init(mid->loop, handle);
@@ -195,10 +230,38 @@ int muv_tcp_connect(muv_t* mid, uv_connect_t* req, uv_tcp_t* handle,
 
   return muv_req_queue_push(mid, (muv_req_t*) tcp_connect_req);
 }
+int muv_tcp_connect6(muv_t* mid, uv_connect_t* req, uv_tcp_t* handle,
+    struct sockaddr_in6 address, uv_connect_cb cb) {
+  muv_tcp_connect6_t* tcp_connect6_req;
+
+  tcp_connect6_req = (muv_tcp_connect6_t*) malloc(sizeof(muv_tcp_connect6_t));
+  tcp_connect6_req->type = MUV_TCP_CONNECT6;
+  tcp_connect6_req->req = req;
+  tcp_connect6_req->handle = handle;
+  tcp_connect6_req->address = address;
+  tcp_connect6_req->cb = cb;
+
+  return muv_req_queue_push(mid, (muv_req_t*) tcp_connect6_req);
+}
+
 int muv_tcp_bind(muv_t* mid, uv_tcp_t* handle, struct sockaddr_in address) {
   int r;
 
   r = uv_tcp_bind(handle, address);
+  if (r) {
+    if (mid->error_cb) {
+      uv_err_t err = uv_last_error(mid->loop);
+      mid->error_cb(mid, err);
+    }
+    return r;
+  }
+
+  return 0;
+}
+int muv_tcp_bind6(muv_t* mid, uv_tcp_t* handle, struct sockaddr_in6 address) {
+  int r;
+
+  r = uv_tcp_bind6(handle, address);
   if (r) {
     if (mid->error_cb) {
       uv_err_t err = uv_last_error(mid->loop);
@@ -220,6 +283,16 @@ int muv_listen(muv_t* mid, uv_stream_t* stream, int backlog, uv_connection_cb cb
 
   return muv_req_queue_push(mid, (muv_req_t*) listen_req);
 }
+int muv_accept(muv_t* mid, uv_stream_t* server, uv_stream_t* client) {
+  muv_accept_t* accept_req;
+
+  accept_req = (muv_accept_t*) malloc(sizeof(muv_accept_t));
+  accept_req->type = MUV_ACCEPT;
+  accept_req->server = server;
+  accept_req->client = client;
+
+  return muv_req_queue_push(mid, (muv_req_t*) accept_req);
+}
 int muv_write(muv_t* mid, uv_write_t* req, uv_stream_t* handle,
     uv_buf_t bufs[], int bufcnt, uv_write_cb cb) {
   muv_write_t* write_req;
@@ -233,6 +306,18 @@ int muv_write(muv_t* mid, uv_write_t* req, uv_stream_t* handle,
   write_req->cb = cb;
 
   return muv_req_queue_push(mid, (muv_req_t*) write_req);
+}
+int muv_shutdown(muv_t* mid, uv_shutdown_t* req, uv_stream_t* handle,
+    uv_shutdown_cb cb) {
+  muv_shutdown_t* shutdown_req;
+
+  shutdown_req = (muv_shutdown_t*) malloc(sizeof(muv_shutdown_t));
+  shutdown_req->type = MUV_SHUTDOWN;
+  shutdown_req->req = req;
+  shutdown_req->handle = handle;
+  shutdown_req->cb = cb;
+
+  return muv_req_queue_push(mid, (muv_req_t*) shutdown_req);
 }
 int muv_close(muv_t* mid, uv_handle_t* handle, uv_close_cb close_cb) {
   muv_close_t* close_req;

@@ -16,8 +16,11 @@ typedef struct {
 
 typedef enum {
   MUV_TCP_CONNECT,
+  MUV_TCP_CONNECT6,
   MUV_LISTEN,
+  MUV_ACCEPT,
   MUV_WRITE,
+  MUV_SHUTDOWN,
   MUV_CLOSE
 } muv_req_type;
 
@@ -38,10 +41,24 @@ typedef struct {
 
 typedef struct {
   MUV_REQ_PRIVATE_FIELDS
+  uv_connect_t* req;
+  uv_tcp_t* handle;
+  struct sockaddr_in6 address;
+  uv_connect_cb cb;
+} muv_tcp_connect6_t;
+
+typedef struct {
+  MUV_REQ_PRIVATE_FIELDS
   uv_stream_t* stream;
   int backlog;
   uv_connection_cb cb;
 } muv_listen_t;
+
+typedef struct {
+  MUV_REQ_PRIVATE_FIELDS
+  uv_stream_t* server;
+  uv_stream_t* client;
+} muv_accept_t;
 
 typedef struct {
   MUV_REQ_PRIVATE_FIELDS
@@ -51,6 +68,13 @@ typedef struct {
   int bufcnt;
   uv_write_cb cb;
 } muv_write_t;
+
+typedef struct {
+  MUV_REQ_PRIVATE_FIELDS
+  uv_shutdown_t* req;
+  uv_stream_t* handle;
+  uv_shutdown_cb cb;
+} muv_shutdown_t;
 
 typedef struct {
   MUV_REQ_PRIVATE_FIELDS

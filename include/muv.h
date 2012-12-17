@@ -31,10 +31,15 @@ int muv_destroy(muv_t* mid);
 int muv_tcp_init(muv_t* mid, uv_loop_t* loop, uv_tcp_t* handle);
 int muv_tcp_connect(muv_t* mid, uv_connect_t* req, uv_tcp_t* handle,
     struct sockaddr_in address, uv_connect_cb cb);
+int muv_tcp_connect6(muv_t* mid, uv_connect_t* req, uv_tcp_t* handle,
+    struct sockaddr_in6 address, uv_connect_cb cb);
 int muv_tcp_bind(muv_t* mid, uv_tcp_t* handle, struct sockaddr_in address);
+int muv_tcp_bind6(muv_t* mid, uv_tcp_t* handle, struct sockaddr_in6 address);
 int muv_listen(muv_t* mid, uv_stream_t* stream, int backlog, uv_connection_cb cb);
+int muv_accept(muv_t* mid, uv_stream_t* server, uv_stream_t* client);
 int muv_write(muv_t* mid, uv_write_t* req, uv_stream_t* handle,
     uv_buf_t bufs[], int bufcnt, uv_write_cb cb);
+int muv_shutdown(muv_t* mid, uv_shutdown_t* req, uv_stream_t* handle, uv_shutdown_cb cb);
 int muv_close(muv_t* mid, uv_handle_t* handle, uv_close_cb close_cb);
 
 #ifdef __cplusplus
