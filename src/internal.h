@@ -82,7 +82,9 @@ typedef struct {
   uv_close_cb cb;
 } muv_close_t;
 
-int muv_req_queue_push(muv_t* mid, muv_req_t* req);
+void muv_req_queue_push(muv_t* mid, muv_req_t* req);
+int muv_req_queue_flush(muv_t* mid);
+void muv__req_queue_flush(muv_t* mid);
 void muv__async_cb(uv_async_t* async, int status);
 void muv__thread_cb(void* arg);
 

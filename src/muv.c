@@ -7,8 +7,7 @@
 #include "muv.h"
 #include "internal.h"
 
-int muv_req_queue_push(muv_t* mid, muv_req_t* req) {
-  int r;
+void muv_req_queue_push(muv_t* mid, muv_req_t* req) {
   node_t* node;
 
   node = (node_t*) malloc(sizeof(node_t));
@@ -18,6 +17,9 @@ int muv_req_queue_push(muv_t* mid, muv_req_t* req) {
   uv_mutex_lock(&(mid->mutex));
   ngx_queue_insert_tail(&(mid->req_queue), &(node->node));
   uv_mutex_unlock(&(mid->mutex));
+}
+int muv_req_queue_flush(muv_t* mid) {
+  int r;
 
   r = uv_async_send(&(mid->async));
   if (r) {
@@ -30,14 +32,10 @@ int muv_req_queue_push(muv_t* mid, muv_req_t* req) {
 
   return 0;
 }
-
-void muv__async_cb(uv_async_t* async, int status) {
+void muv__req_queue_flush(muv_t* mid) {
   int r;
-  muv_t* mid;
   ngx_queue_t* q;
   node_t* node;
-
-  mid = (muv_t*) async->data;
 
   uv_mutex_lock(&(mid->mutex));
 
@@ -128,11 +126,18 @@ void muv__async_cb(uv_async_t* async, int status) {
     }
 
     ngx_queue_remove(q);
+    free(node->req);
     free(node);
   }
 
   uv_mutex_unlock(&(mid->mutex));
+}
+void muv__async_cb(uv_async_t* async, int status) {
+  muv_t* mid;
 
+  mid = (muv_t*) async->data;
+
+  muv__req_queue_flush(mid);
 }
 void muv__thread_cb(void* arg) {
   muv_t* mid;
@@ -228,7 +233,8 @@ int muv_tcp_connect(muv_t* mid, uv_connect_t* req, uv_tcp_t* handle,
   tcp_connect_req->address = address;
   tcp_connect_req->cb = cb;
 
-  return muv_req_queue_push(mid, (muv_req_t*) tcp_connect_req);
+  muv_req_queue_push(mid, (muv_req_t*) tcp_connect_req);
+  return muv_req_queue_flush(mid);
 }
 int muv_tcp_connect6(muv_t* mid, uv_connect_t* req, uv_tcp_t* handle,
     struct sockaddr_in6 address, uv_connect_cb cb) {
@@ -241,7 +247,8 @@ int muv_tcp_connect6(muv_t* mid, uv_connect_t* req, uv_tcp_t* handle,
   tcp_connect6_req->address = address;
   tcp_connect6_req->cb = cb;
 
-  return muv_req_queue_push(mid, (muv_req_t*) tcp_connect6_req);
+  muv_req_queue_push(mid, (muv_req_t*) tcp_connect6_req);
+  return muv_req_queue_flush(mid);
 }
 
 int muv_tcp_bind(muv_t* mid, uv_tcp_t* handle, struct sockaddr_in address) {
@@ -281,7 +288,8 @@ int muv_listen(muv_t* mid, uv_stream_t* stream, int backlog, uv_connection_cb cb
   listen_req->backlog = backlog;
   listen_req->cb = cb;
 
-  return muv_req_queue_push(mid, (muv_req_t*) listen_req);
+  muv_req_queue_push(mid, (muv_req_t*) listen_req);
+  return muv_req_queue_flush(mid);
 }
 int muv_accept(muv_t* mid, uv_stream_t* server, uv_stream_t* client) {
   muv_accept_t* accept_req;
@@ -291,7 +299,8 @@ int muv_accept(muv_t* mid, uv_stream_t* server, uv_stream_t* client) {
   accept_req->server = server;
   accept_req->client = client;
 
-  return muv_req_queue_push(mid, (muv_req_t*) accept_req);
+  muv_req_queue_push(mid, (muv_req_t*) accept_req);
+  return muv_req_queue_flush(mid);
 }
 int muv_write(muv_t* mid, uv_write_t* req, uv_stream_t* handle,
     uv_buf_t bufs[], int bufcnt, uv_write_cb cb) {
@@ -305,7 +314,8 @@ int muv_write(muv_t* mid, uv_write_t* req, uv_stream_t* handle,
   write_req->bufcnt = bufcnt;
   write_req->cb = cb;
 
-  return muv_req_queue_push(mid, (muv_req_t*) write_req);
+  muv_req_queue_push(mid, (muv_req_t*) write_req);
+  return muv_req_queue_flush(mid);
 }
 int muv_shutdown(muv_t* mid, uv_shutdown_t* req, uv_stream_t* handle,
     uv_shutdown_cb cb) {
@@ -317,7 +327,8 @@ int muv_shutdown(muv_t* mid, uv_shutdown_t* req, uv_stream_t* handle,
   shutdown_req->handle = handle;
   shutdown_req->cb = cb;
 
-  return muv_req_queue_push(mid, (muv_req_t*) shutdown_req);
+  muv_req_queue_push(mid, (muv_req_t*) shutdown_req);
+  return muv_req_queue_flush(mid);
 }
 int muv_close(muv_t* mid, uv_handle_t* handle, uv_close_cb close_cb) {
   muv_close_t* close_req;
@@ -327,5 +338,6 @@ int muv_close(muv_t* mid, uv_handle_t* handle, uv_close_cb close_cb) {
   close_req->handle = handle;
   close_req->cb = close_cb;
 
-  return muv_req_queue_push(mid, (muv_req_t*) close_req);
+  muv_req_queue_push(mid, (muv_req_t*) close_req);
+  return muv_req_queue_flush(mid);
 }
