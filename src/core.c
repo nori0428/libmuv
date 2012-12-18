@@ -33,7 +33,6 @@ int muv_req_queue_flush(muv_t* mid) {
   return 0;
 }
 void muv__req_queue_flush(muv_t* mid) {
-  int r;
   ngx_queue_t* q;
   node_t* node;
 
@@ -42,34 +41,13 @@ void muv__req_queue_flush(muv_t* mid) {
   ngx_queue_foreach(q, &(mid->req_queue)) {
     node = ngx_queue_data(q, node_t, node);
 
+#define X(uc, lc)                                \
+    case MUV_##uc:                               \
+      muv__##lc(mid, (muv_##lc##_t*) node->req); \
+      break;
+
     switch (node->req->type) {
-    case MUV_TCP_CONNECT:
-      muv__tcp_connect(mid, (muv_tcp_connect_t*) node->req);
-      break;
-    case MUV_TCP_CONNECT6:
-      muv__tcp_connect6(mid, (muv_tcp_connect6_t*) node->req);
-      break;
-    case MUV_LISTEN:
-      muv__listen(mid, (muv_listen_t*) node->req);
-      break;
-    case MUV_ACCEPT:
-      muv__accept(mid, (muv_accept_t*) node->req);
-      break;
-    case MUV_READ_START:
-      muv__read_start(mid, (muv_read_start_t*) node->req);
-      break;
-    case MUV_READ_STOP:
-      muv__read_stop(mid, (muv_read_stop_t*) node->req);
-      break;
-    case MUV_WRITE:
-      muv__write(mid, (muv_write_t*) node->req);
-      break;
-    case MUV_SHUTDOWN:
-      muv__shutdown(mid, (muv_shutdown_t*) node->req);
-      break;
-    case MUV_CLOSE:
-      muv__close(mid, (muv_close_t*) node->req);
-      break;
+    MUV_REQ_TYPE_MAP(X)
     default:
       {
         uv_err_t err;
@@ -78,6 +56,8 @@ void muv__req_queue_flush(muv_t* mid) {
         break;
       }
     }
+
+#undef X
 
     ngx_queue_remove(q);
     free(node->req);

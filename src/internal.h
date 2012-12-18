@@ -1,11 +1,21 @@
 #ifndef INTERNAL_H_
 #define INTERNAL_H_
 
-#include <stdio.h>
-
 #include <uv.h>
+#include <uv-private/ngx-queue.h>
 
 #include "muv.h"
+
+#define MUV_REQ_TYPE_MAP(XX)         \
+  XX(TCP_CONNECT, tcp_connect)       \
+  XX(TCP_CONNECT6, tcp_connect6)     \
+  XX(LISTEN, listen)                 \
+  XX(ACCEPT, accept)                 \
+  XX(READ_START, read_start)         \
+  XX(READ_STOP, read_stop)           \
+  XX(WRITE, write)                   \
+  XX(SHUTDOWN, shutdown)             \
+  XX(CLOSE, close)                   \
 
 typedef struct muv_req_s muv_req_t;
 
@@ -15,15 +25,10 @@ typedef struct {
 } node_t;
 
 typedef enum {
-  MUV_TCP_CONNECT,
-  MUV_TCP_CONNECT6,
-  MUV_LISTEN,
-  MUV_ACCEPT,
-  MUV_READ_START,
-  MUV_READ_STOP,
-  MUV_WRITE,
-  MUV_SHUTDOWN,
-  MUV_CLOSE
+#define XX(uc, lc) MUV_##uc,
+  MUV_REQ_TYPE_MAP(XX)
+#undef XX
+  MUV_REQ_TYPE_MAX
 } muv_req_type;
 
 #define MUV_REQ_PRIVATE_FIELDS \
