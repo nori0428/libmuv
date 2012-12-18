@@ -44,78 +44,32 @@ void muv__req_queue_flush(muv_t* mid) {
 
     switch (node->req->type) {
     case MUV_TCP_CONNECT:
-      {
-        muv_tcp_connect_t* req = (muv_tcp_connect_t*) node->req;
-        r = uv_tcp_connect(req->req, req->handle, req->address, req->cb);
-        if (r) {
-          if (req->cb) {
-            req->cb(req->req, -1);
-          }
-        }
-        break;
-      }
+      muv__tcp_connect(mid, (muv_tcp_connect_t*) node->req);
+      break;
     case MUV_TCP_CONNECT6:
-      {
-        muv_tcp_connect6_t* req = (muv_tcp_connect6_t*) node->req;
-        r = uv_tcp_connect6(req->req, req->handle, req->address, req->cb);
-        if (r) {
-          if (req->cb) {
-            req->cb(req->req, -1);
-          }
-        }
-        break;
-      }
+      muv__tcp_connect6(mid, (muv_tcp_connect6_t*) node->req);
+      break;
     case MUV_LISTEN:
-      {
-        muv_listen_t* req = (muv_listen_t*) node->req;
-        r = uv_listen(req->stream, req->backlog, req->cb);
-        if (r) {
-          if (req->cb) {
-            req->cb(req->stream, -1);
-          }
-        }
-        break;
-      }
+      muv__listen(mid, (muv_listen_t*) node->req);
+      break;
     case MUV_ACCEPT:
-      {
-        muv_accept_t* req = (muv_accept_t*) node->req;
-        r = uv_accept(req->server, req->client);
-        if (r) {
-          if (mid->error_cb) {
-            uv_err_t err = uv_last_error(mid->loop);
-            mid->error_cb(mid, err);
-          }
-        }
-        break;
-      }
+      muv__accept(mid, (muv_accept_t*) node->req);
+      break;
+    case MUV_READ_START:
+      muv__read_start(mid, (muv_read_start_t*) node->req);
+      break;
+    case MUV_READ_STOP:
+      muv__read_stop(mid, (muv_read_stop_t*) node->req);
+      break;
     case MUV_WRITE:
-      {
-        muv_write_t* req = (muv_write_t*) node->req;
-        r = uv_write(req->req, req->handle, req->bufs, req->bufcnt, req->cb);
-        if (r) {
-          if (req->cb) {
-            req->cb(req->req, -1);
-          }
-        }
-        break;
-      }
+      muv__write(mid, (muv_write_t*) node->req);
+      break;
     case MUV_SHUTDOWN:
-      {
-        muv_shutdown_t* req = (muv_shutdown_t*) node->req;
-        r = uv_shutdown(req->req, req->handle, req->cb);
-        if (r) {
-          if (req->cb) {
-            req->cb(req->req, -1);
-          }
-        }
-        break;
-      }
+      muv__shutdown(mid, (muv_shutdown_t*) node->req);
+      break;
     case MUV_CLOSE:
-      {
-        muv_close_t* req = (muv_close_t*) node->req;
-        uv_close(req->handle, req->cb);
-        break;
-      }
+      muv__close(mid, (muv_close_t*) node->req);
+      break;
     default:
       {
         uv_err_t err;

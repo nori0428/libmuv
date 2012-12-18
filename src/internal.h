@@ -19,6 +19,8 @@ typedef enum {
   MUV_TCP_CONNECT6,
   MUV_LISTEN,
   MUV_ACCEPT,
+  MUV_READ_START,
+  MUV_READ_STOP,
   MUV_WRITE,
   MUV_SHUTDOWN,
   MUV_CLOSE
@@ -62,6 +64,18 @@ typedef struct {
 
 typedef struct {
   MUV_REQ_PRIVATE_FIELDS
+  uv_stream_t* handle;
+  uv_alloc_cb alloc_cb;
+  uv_read_cb read_cb;
+} muv_read_start_t;
+
+typedef struct {
+  MUV_REQ_PRIVATE_FIELDS
+  uv_stream_t* handle;
+} muv_read_stop_t;
+
+typedef struct {
+  MUV_REQ_PRIVATE_FIELDS
   uv_write_t* req;
   uv_stream_t* handle;
   uv_buf_t* bufs;
@@ -82,10 +96,26 @@ typedef struct {
   uv_close_cb cb;
 } muv_close_t;
 
+/* core */
 void muv_req_queue_push(muv_t* mid, muv_req_t* req);
 int muv_req_queue_flush(muv_t* mid);
 void muv__req_queue_flush(muv_t* mid);
 void muv__async_cb(uv_async_t* async, int status);
 void muv__thread_cb(void* arg);
+
+/* handle */
+void muv__close(muv_t* mid, muv_close_t* req);
+
+/* stream */
+void muv__listen(muv_t* mid, muv_listen_t* req);
+void muv__accept(muv_t* mid, muv_accept_t* req);
+void muv__read_start(muv_t* mid, muv_read_start_t* req);
+void muv__read_stop(muv_t* mid, muv_read_stop_t* req);
+void muv__write(muv_t* mid, muv_write_t* req);
+void muv__shutdown(muv_t* mid, muv_shutdown_t* req);
+
+/* tcp */
+void muv__tcp_connect(muv_t* mid, muv_tcp_connect_t* req);
+void muv__tcp_connect6(muv_t* mid, muv_tcp_connect6_t* req);
 
 #endif  /* INTERNAL_H_ */

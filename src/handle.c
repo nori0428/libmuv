@@ -16,3 +16,7 @@ int muv_close(muv_t* mid, uv_handle_t* handle, uv_close_cb close_cb) {
   muv_req_queue_push(mid, (muv_req_t*) close_req);
   return muv_req_queue_flush(mid);
 }
+
+void muv__close(muv_t* mid, muv_close_t* req) {
+  uv_close(req->handle, req->cb);
+}
