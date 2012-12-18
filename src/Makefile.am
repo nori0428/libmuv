@@ -6,4 +6,7 @@ lib_LTLIBRARIES = \
 	libmuv.la
 
 libmuv_la_SOURCES = \
-	muv.c
+	core.c \
+	handle.c \
+	stream.c \
+	tcp.c

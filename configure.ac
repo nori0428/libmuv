@@ -1,6 +1,6 @@
 AC_PREREQ([2.68])
 AC_INIT([libmuv], [0.1.0], [shsfre09@gmail.com])
-AC_CONFIG_SRCDIR([src/muv.c])
+AC_CONFIG_SRCDIR([src/core.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
